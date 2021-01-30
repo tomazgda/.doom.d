@@ -1,109 +1,114 @@
-;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
+(setq user-full-name "Tomaz GdA"
+      user-mail-address "tomazgda@icloud.com.com")
 
-;; Place your private configuration here! Remember, you do not need to run 'doom
-;; sync' after modifying this file!
+(modus-themes-load-themes)
+(setq doom-theme 'modus-operandi)
+(global-set-key (kbd "<f4>") #'modus-themes-toggle)
+(setq
+modus-themes-org-blocks 'greyscale
+modus-themes-mode-line 'borderless
 
+modus-themes-variable-pitch-ui t
+      modus-themes-variable-pitch-headings t
+      modus-themes-scale-headings t
+      modus-themes-scale-1 1.1
+      modus-themes-scale-2 1.15
+      modus-themes-scale-3 1.21
+      modus-themes-scale-4 1.27
+      modus-themes-scale-5 1.33)
 
-;; Some functionality uses this to identify you, e.g. GPG configuration, email
-;; clients, file templates and snippets.
-(setq user-full-name "Tomaz Geddes de Almeida"
-      user-mail-address "tomazgda@icloud.com")
+(run-at-time "08:00" (* 60 60 24) (lambda () (enable-theme 'modus-operandi)))
+(run-at-time "18:00" (* 60 60 24) (lambda () (enable-theme 'modus-vivendi)))
 
-;; Doom exposes five (optional) variables for controlling fonts in Doom. Here
-;; are the three important ones:
-;;
-;; + `doom-font'
-;; + `doom-variable-pitch-font'
-;; + `doom-big-font' -- used for `doom-big-font-mode'; use this for
-;;   presentations or streaming.
-;;
-;; They all accept either a font-spec, font string ("Input Mono-12"), or xlfd
-;; font string. You generally only need these two:
-;; (setq doom-font (font-spec :family "monospace" :size 12 :weight 'semi-light)
-;;       doom-variable-pitch-font (font-spec :family "sans" :size 13))
+(setq display-line-numbers-type nil)
 
-;; There are two ways to load a theme. Both assume the theme is installed and
-;; available. You can either set `doom-theme' or manually load a theme with the
-;; `load-theme' function. This is the default:
-(setq doom-theme 'doom-solarized-dark)
-
-;; If you use `org' and don't want your org files in the default location below,
-;; change `org-directory'. It must be set before org loads!
 (setq org-directory "~/org/")
+(setq deft-directory "~/org"
+      deft-extensions '("org" "txt")
+      deft-recursive t)
+(setq org-roam-directory "~/org/roam")
+(setq org-journal-dir "~/org/journal")
 
-;; This determines the style of line numbers in effect. If set to `nil', line
-;; numbers are disabled. For relative line numbers, set this to `relative'.
-(setq display-line-numbers-type t)
+ (use-package org-roam-server
+  :ensure t
+  :config
+  (setq org-roam-server-host "127.0.0.1"
+        org-roam-server-port 8080
+        org-roam-server-authenticate nil
+        org-roam-server-export-inline-images t
+        org-roam-server-serve-files nil
+        org-roam-server-served-file-extensions '("pdf" "mp4" "ogv")
+        org-roam-server-network-poll t
+        org-roam-server-network-arrows nil
+        org-roam-server-network-label-truncate t
+        org-roam-server-network-label-truncate-length 60
+        org-roam-server-network-label-wrap-length 20))
 
+(when (org-roam--org-roam-file-p)
+  (org-roam))
 
-;; Here are some additional functions/macros that could help you configure Doom:
-;;
-;; - `load!' for loading external *.el files relative to this one
-;; - `use-package!' for configuring packages
-;; - `after!' for running code after a package has loaded
-;; - `add-load-path!' for adding directories to the `load-path', relative to
-;;   this file. Emacs searches the `load-path' when you load packages with
-;;   `require' or `use-package'.
-;; - `map!' for binding new keys
-;;
-;; To get information about any of these functions/macros, move the cursor over
-;; the highlighted symbol at press 'K' (non-evil users must press 'C-c c k').
-;; This will open documentation for it, including demos of how they are used.
-;;
-;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
-;; they are implemented.
+(setq elfeed-feeds '(
+        ;; proper news
+        ("http://feeds.bbci.co.uk/news/world/rss.xml" news)
+        ("https://www.theguardian.com/world/rss" news)
+        ;; youtube
+        ("https://www.youtube.com/feeds/videos.xml?channel_id=UC-lHJZR3Gqxm24_Vd_AJ5Yw" youtube pewds)
+        ("https://www.youtube.com/feeds/videos.xml?channel_id=UCGwu0nbY2wSkW8N-cghnLpA" youtube jaiden)
+        ;; reddit
+        ("https://www.reddit.com/r/linux.rss" reddit linux)
+))
 
-;; smooth scrolling
+(setq org-agenda-files '("~/org/todo"))
 
-; (setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
-; (setq mouse-wheel-progressive-speed nil)
-; (setq mouse-wheel-follow-mouse 't)
-; (setq scroll-step 1)
-
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '((racket . t)))
-
-(if (eq initial-window-system 'x)                 ; if started by emacs command or desktop file
-    (toggle-frame-maximized)
-  (toggle-frame-fullscreen))
-
-(setq org-agenda-files '("~/Notes/TODO"))
-
-(setq org-journal-date-prefix "#+TITLE:"
-      org-journal-time-prefix "* "
-      org-journal-date-format "%a, %Y-%m-%d"
-      org-journal-file-format "%Y-%m-%d.org"
-      org-journal-dir "~/Notes/Journal")
+(setq org-super-agenda-groups '((:name "Today"
+                                  :time-grid t
+                                  :scheduled today)
+                           (:name "Due today"
+                                  :deadline today)
+                           (:name "Important"
+                                  :priority "A")
+                           (:name "Overdue"
+                                  :deadline past)
+                           (:name "Due soon"
+                                  :deadline future)
+                           (:name "Big Outcomes"
+                                  :tag "bo")))
 
 (add-to-list 'load-path "/opt/homebrew/share/emacs/site-lisp/mu/mu4e")
 (require 'mu4e)
 (setq mail-user-agent 'mu4e-user-agent)
 
+(after! mu4e
+  (setq
+   mu4e-headers-skip-duplicates  t
+   mu4e-view-show-images t
+   mu4e-view-show-addresses t
+   mu4e-compose-format-flowed nil
+   mu4e-date-format "%y/%m/%d"
+   mu4e-headers-date-format "%Y/%m/%d"
+   mu4e-change-filenames-when-moving t
+   mu4e-attachments-dir "~/Downloads"
+   mu4e-refile-folder "/icloud/Archive"
+   mu4e-sent-folder   "/icloud/Sent"
+   mu4e-drafts-folder "/icloud/Drafts"
+   mu4e-trash-folder  "/icloud/Trash"
+   mu4e-get-mail-command  "mbsync -a"))
+
+(after! mu4e
+  (setq sendmail-program "/opt/homebrew/bin/msmtp"
+  send-mail-function #'smtpmail-send-it
+  message-sendmail-f-is-evil t
+  message-sendmail-extra-arguments '("--read-envelope-from"); , "--read-recipients")
+  message-send-mail-function #'message-send-mail-with-sendmail))
+
+(fringe-mode 15)
 
 (setq
-mu4e-headers-skip-duplicates  t
-mu4e-view-show-images t
-mu4e-view-show-addresses t
-mu4e-compose-format-flowed nil
-mu4e-date-format "%y/%m/%d"
-mu4e-headers-date-format "%Y/%m/%d"
-mu4e-change-filenames-when-moving t
-mu4e-attachments-dir "~/Downloads"
+   split-width-threshold 0
+   split-height-threshold nil)
 
-;; mu4e-maildir       "~/Maildir"   ;; top-level Maildir
- ;; note that these folders below must start with /
- ;; the paths are relative to maildir root
-mu4e-refile-folder "/icloud/Archive"
-mu4e-sent-folder   "/icloud/Sent"
-mu4e-drafts-folder "/icloud/Drafts"
-mu4e-trash-folder  "/icloud/Trash"
+(global-visual-line-mode 1)
+(global-visual-fill-column-mode 1)
+(set-fill-column 100)
 
-;; this setting allows to re-sync and re-index mail
-;; by pressing U
-mu4e-get-mail-command  "mbsync -a")
 
-(setq message-send-mail-function    'smtpmail-send-it
-      smtpmail-smtp-server  "smtp.mail.me.com"
-      smtpmail-stream-type  'ssl
-      smtpmail-smtp-service 587)
