@@ -1,5 +1,6 @@
 (setq user-full-name "Tomaz GdA"
       user-mail-address "tomazgda@icloud.com.com")
+;;(setq writeroom-fullscreen-effect 'maximized)
 
 (modus-themes-load-themes)
 (setq doom-theme 'modus-operandi)
@@ -20,7 +21,9 @@ modus-themes-variable-pitch-ui t
 (run-at-time "08:00" (* 60 60 24) (lambda () (enable-theme 'modus-operandi)))
 (run-at-time "18:00" (* 60 60 24) (lambda () (enable-theme 'modus-vivendi)))
 
-(setq display-line-numbers-type nil)
+;(modus-themes-mode-line 'borderless)
+
+(setq display-line-numbers-type t)
 
 (setq org-directory "~/org/")
 (setq deft-directory "~/org"
@@ -60,20 +63,6 @@ modus-themes-variable-pitch-ui t
 
 (setq org-agenda-files '("~/org/todo"))
 
-(setq org-super-agenda-groups '((:name "Today"
-                                  :time-grid t
-                                  :scheduled today)
-                           (:name "Due today"
-                                  :deadline today)
-                           (:name "Important"
-                                  :priority "A")
-                           (:name "Overdue"
-                                  :deadline past)
-                           (:name "Due soon"
-                                  :deadline future)
-                           (:name "Big Outcomes"
-                                  :tag "bo")))
-
 (add-to-list 'load-path "/opt/homebrew/share/emacs/site-lisp/mu/mu4e")
 (require 'mu4e)
 (setq mail-user-agent 'mu4e-user-agent)
@@ -101,6 +90,15 @@ modus-themes-variable-pitch-ui t
   message-sendmail-extra-arguments '("--read-envelope-from"); , "--read-recipients")
   message-send-mail-function #'message-send-mail-with-sendmail))
 
+(setq org-ditaa-jar-path "~/Downloads/ditaa0_9/ditaa0_9.jar")
+
+(org-babel-do-load-languages
+ 'org-babel-load-languages
+ '(
+   (ditaa . t)
+   )
+)
+
 (fringe-mode 15)
 
 (setq
@@ -109,6 +107,154 @@ modus-themes-variable-pitch-ui t
 
 (global-visual-line-mode 1)
 (global-visual-fill-column-mode 1)
-(set-fill-column 100)
+(set-fill-column 200)
+
+;; When using this directly, you will need to have use-package installed:
+;; M-x package-install, select use-package. But if you start via
+;; `standalone.el', this is being taken care of automatically.
 
 
+;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;; rustic = basic rust-mode + additions
+
+(setq rust-rustfmt-bin "/Users/tomaz/.cargo/bin/rustfmt")
+
+(use-package rustic
+  :ensure
+  :bind (:map rustic-mode-map
+              ("M-j" . lsp-ui-imenu)
+              ("M-?" . lsp-find-references)
+              ("C-c C-c l" . flycheck-list-errors)
+              ("C-c C-c a" . lsp-execute-code-action)
+              ("C-c C-c r" . lsp-rename)
+              ("C-c C-c q" . lsp-workspace-restart)
+              ("C-c C-c Q" . lsp-workspace-shutdown)
+              ("C-c C-c s" . lsp-rust-analyzer-status)
+              ("C-c C-c e" . lsp-rust-analyzer-expand-macro)
+              ("C-c C-c d" . dap-hydra))
+  :config
+  ;; uncomment for less flashiness
+  ;; (setq lsp-eldoc-hook nil)
+  ;; (setq lsp-enable-symbol-highlighting nil)
+  ;; (setq lsp-signature-auto-activate nil)
+
+  ;; comment to disable rustfmt on save
+  ;;(setq rustic-format-on-save t)
+  (add-hook 'rustic-mode-hook 'rk/rustic-mode-hook))
+
+(defun rk/rustic-mode-hook ()
+  ;; so that run C-c C-c C-r works without having to confirm
+  (setq-local buffer-save-without-query t))
+
+;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;; for rust-analyzer integration
+
+(use-package lsp-mode
+  :ensure
+  :commands lsp
+  :custom
+  ;; what to use when checking on-save. "check" is default, I prefer clippy
+  (lsp-rust-analyzer-cargo-watch-command "clippy")
+  (lsp-eldoc-render-all t)
+  (lsp-idle-delay 0.6)
+  :config
+  (add-hook 'lsp-mode-hook 'lsp-ui-mode))
+
+(use-package lsp-ui
+  :ensure
+  :commands lsp-ui-mode
+  :custom
+  (lsp-ui-peek-always-show t)
+  (lsp-ui-sideline-show-hover t)
+  (lsp-ui-doc-enable nil))
+
+
+;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;; inline errors
+
+(use-package flycheck :ensure)
+
+
+;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;; auto-completion and code snippets
+
+(use-package yasnippet
+  :ensure
+  :config
+  (yas-reload-all)
+  (add-hook 'prog-mode-hook 'yas-minor-mode)
+  (add-hook 'text-mode-hook 'yas-minor-mode))
+
+(use-package company
+  :ensure
+  :bind
+  (:map company-active-map
+              ("C-n". company-select-next)
+              ("C-p". company-select-previous)
+              ("M-<". company-select-first)
+              ("M->". company-select-last))
+  (:map company-mode-map
+        ("<tab>". tab-indent-or-complete)
+        ("TAB". tab-indent-or-complete)))
+
+(defun company-yasnippet-or-completion ()
+  (interactive)
+  (or (do-yas-expand)
+      (company-complete-common)))
+
+(defun check-expansion ()
+  (save-excursion
+    (if (looking-at "\\_>") t
+      (backward-char 1)
+      (if (looking-at "\\.") t
+        (backward-char 1)
+        (if (looking-at "::") t nil)))))
+
+(defun do-yas-expand ()
+  (let ((yas/fallback-behavior 'return-nil))
+    (yas/expand)))
+
+(defun tab-indent-or-complete ()
+  (interactive)
+  (if (minibufferp)
+      (minibuffer-complete)
+    (if (or (not yas/minor-mode)
+            (null (do-yas-expand)))
+        (if (check-expansion)
+            (company-complete-common)
+          (indent-for-tab-command)))))
+
+
+;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;; for Cargo.toml and other config files
+
+(use-package toml-mode :ensure)
+
+
+;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;; setting up debugging support with dap-mode
+
+(use-package exec-path-from-shell
+  :ensure
+  :init (exec-path-from-shell-initialize))
+
+(when (executable-find "lldb-mi")
+  (use-package dap-mode
+    :ensure
+    :config
+    (dap-ui-mode)
+    (dap-ui-controls-mode 1)
+
+    (require 'dap-lldb)
+    (require 'dap-gdb-lldb)
+    ;; installs .extension/vscode
+    (dap-gdb-lldb-setup)
+    (dap-register-debug-template
+     "Rust::LLDB Run Configuration"
+     (list :type "lldb"
+           :request "launch"
+           :name "LLDB::Run"
+	   :gdbpath "rust-lldb"
+           ;; uncomment if lldb-mi is not in PATH
+           ;; :lldbmipath "path/to/lldb-mi"
+           ))))

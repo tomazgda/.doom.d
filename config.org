@@ -1,5 +1,5 @@
 #+TITLE: Config
-#+PROPERTY: header-args :tangle config.el :results silent 
+#+PROPERTY: header-args :tangle config.el :results silent
 
 * Table of Contents :toc:
 - [[#user-details][User Details]]
@@ -11,11 +11,12 @@
 - [[#elfeed][Elfeed]]
 - [[#agenda][Agenda]]
   - [[#dir][Dir]]
+  - [[#super-agenda][Super Agenda]]
 - [[#mu4e][Mu4e]]
   - [[#viewing][Viewing]]
   - [[#sending][Sending]]
 - [[#babel][Babel]]
-- [[#modeline][Modeline]]
+- [[#hold-modeline][HOLD Modeline]]
   - [[#window-tracking][Window Tracking]]
   - [[#modeline-appearance][Modeline appearance]]
 - [[#fringe][Fringe]]
@@ -27,12 +28,13 @@
 #+begin_src elisp
 (setq user-full-name "Tomaz GdA"
       user-mail-address "tomazgda@icloud.com.com")
+;;(setq writeroom-fullscreen-effect 'maximized)
 #+end_src
 
 * Themes
 #+begin_src elisp
 (modus-themes-load-themes)
-(setq doom-theme 'modus-operandi)
+(setq doom-theme 'doom-dracula)
 (global-set-key (kbd "<f4>") #'modus-themes-toggle)
 (setq
 modus-themes-org-blocks 'greyscale
@@ -49,11 +51,13 @@ modus-themes-variable-pitch-ui t
 
 (run-at-time "08:00" (* 60 60 24) (lambda () (enable-theme 'modus-operandi)))
 (run-at-time "18:00" (* 60 60 24) (lambda () (enable-theme 'modus-vivendi)))
+
+;(modus-themes-mode-line 'borderless)
 #+end_src
 
 * Line Numbers
 #+begin_src elisp
-(setq display-line-numbers-type nil)
+(setq display-line-numbers-type t)
 #+end_src
 * Org
 ** Directory
@@ -104,6 +108,7 @@ modus-themes-variable-pitch-ui t
 #+begin_src elisp
 (setq org-agenda-files '("~/org/todo"))
 #+end_src
+** TODO Super Agenda
 * Mu4e
 ** Viewing
 #+begin_src elisp
@@ -127,7 +132,7 @@ modus-themes-variable-pitch-ui t
    mu4e-trash-folder  "/icloud/Trash"
    mu4e-get-mail-command  "mbsync -a"))
 #+end_src
-** Sending
+** TODO Sending
 #+begin_src elisp
 (after! mu4e
   (setq sendmail-program "/opt/homebrew/bin/msmtp"
@@ -137,7 +142,19 @@ modus-themes-variable-pitch-ui t
   message-send-mail-function #'message-send-mail-with-sendmail))
 #+end_src
 * Babel
-* Modeline
+#+begin_src elisp
+
+(setq org-ditaa-jar-path "~/Downloads/ditaa0_9/ditaa0_9.jar")
+
+(org-babel-do-load-languages
+ 'org-babel-load-languages
+ '(
+   (ditaa . t)
+   )
+)
+
+#+end_src
+* HOLD Modeline
 :PROPERTIES:
 :header-args: :tangle no
 :END:
@@ -208,7 +225,7 @@ modus-themes-variable-pitch-ui t
                (propertize " %m " 'face 'font-lock-string-face)))
 #+end_src
 
-* Fringe
+* TODO Fringe
 #+begin_src elisp
 (fringe-mode 15)
 #+end_src
@@ -219,17 +236,184 @@ modus-themes-variable-pitch-ui t
    split-width-threshold 0
    split-height-threshold nil)
 #+end_src
-* Visual-line-mode
+* TODO Visual-line-mode
 #+begin_src elisp
 (global-visual-line-mode 1)
 (global-visual-fill-column-mode 1)
-(set-fill-column 100)
+(set-fill-column 200)
 #+end_src
 
 
 * TODO Rust
+
+#+begin_src elisp :tangle no
+(add-hook 'rust-mode-hook 'cargo-minor-mode)
+
+(setq racer-cmd "~/.cargo/bin/racer") ;; Rustup binaries PATH
+(setq racer-rust-src-path "/Users/tomaz/rust/src/") ;; Rust source code PATH
+(setq rust-rustfmt-bin "/Users/tomaz/.cargo/bin/rustfmt")
+
+(add-hook 'rust-mode-hook #'racer-mode)
+(add-hook 'racer-mode-hook #'eldoc-mode)
+(add-hook 'racer-mode-hook #'company-mode)
+(add-hook 'flycheck-mode-hook #'flycheck-rust-setup)
+
+(require 'rust-mode)
+(define-key rust-mode-map (kbd "TAB") #'company-indent-or-complete-common)
+(setq company-tooltip-align-annotations t)
+#+end_src
+
 #+begin_src elisp
 
+;; When using this directly, you will need to have use-package installed:
+;; M-x package-install, select use-package. But if you start via
+;; `standalone.el', this is being taken care of automatically.
+
+
+;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;; rustic = basic rust-mode + additions
+
+(setq rust-rustfmt-bin "/Users/tomaz/.cargo/bin/rustfmt")
+
+(use-package rustic
+  :ensure
+  :bind (:map rustic-mode-map
+              ("M-j" . lsp-ui-imenu)
+              ("M-?" . lsp-find-references)
+              ("C-c C-c l" . flycheck-list-errors)
+              ("C-c C-c a" . lsp-execute-code-action)
+              ("C-c C-c r" . lsp-rename)
+              ("C-c C-c q" . lsp-workspace-restart)
+              ("C-c C-c Q" . lsp-workspace-shutdown)
+              ("C-c C-c s" . lsp-rust-analyzer-status)
+              ("C-c C-c e" . lsp-rust-analyzer-expand-macro)
+              ("C-c C-c d" . dap-hydra))
+  :config
+  ;; uncomment for less flashiness
+  ;; (setq lsp-eldoc-hook nil)
+  ;; (setq lsp-enable-symbol-highlighting nil)
+  ;; (setq lsp-signature-auto-activate nil)
+
+  ;; comment to disable rustfmt on save
+  ;;(setq rustic-format-on-save t)
+  (add-hook 'rustic-mode-hook 'rk/rustic-mode-hook))
+
+(defun rk/rustic-mode-hook ()
+  ;; so that run C-c C-c C-r works without having to confirm
+  (setq-local buffer-save-without-query t))
+
+;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;; for rust-analyzer integration
+
+(use-package lsp-mode
+  :ensure
+  :commands lsp
+  :custom
+  ;; what to use when checking on-save. "check" is default, I prefer clippy
+  (lsp-rust-analyzer-cargo-watch-command "clippy")
+  (lsp-eldoc-render-all t)
+  (lsp-idle-delay 0.6)
+  :config
+  (add-hook 'lsp-mode-hook 'lsp-ui-mode))
+
+(use-package lsp-ui
+  :ensure
+  :commands lsp-ui-mode
+  :custom
+  (lsp-ui-peek-always-show t)
+  (lsp-ui-sideline-show-hover t)
+  (lsp-ui-doc-enable nil))
+
+
+;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;; inline errors
+
+(use-package flycheck :ensure)
+
+
+;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;; auto-completion and code snippets
+
+(use-package yasnippet
+  :ensure
+  :config
+  (yas-reload-all)
+  (add-hook 'prog-mode-hook 'yas-minor-mode)
+  (add-hook 'text-mode-hook 'yas-minor-mode))
+
+(use-package company
+  :ensure
+  :bind
+  (:map company-active-map
+              ("C-n". company-select-next)
+              ("C-p". company-select-previous)
+              ("M-<". company-select-first)
+              ("M->". company-select-last))
+  (:map company-mode-map
+        ("<tab>". tab-indent-or-complete)
+        ("TAB". tab-indent-or-complete)))
+
+(defun company-yasnippet-or-completion ()
+  (interactive)
+  (or (do-yas-expand)
+      (company-complete-common)))
+
+(defun check-expansion ()
+  (save-excursion
+    (if (looking-at "\\_>") t
+      (backward-char 1)
+      (if (looking-at "\\.") t
+        (backward-char 1)
+        (if (looking-at "::") t nil)))))
+
+(defun do-yas-expand ()
+  (let ((yas/fallback-behavior 'return-nil))
+    (yas/expand)))
+
+(defun tab-indent-or-complete ()
+  (interactive)
+  (if (minibufferp)
+      (minibuffer-complete)
+    (if (or (not yas/minor-mode)
+            (null (do-yas-expand)))
+        (if (check-expansion)
+            (company-complete-common)
+          (indent-for-tab-command)))))
+
+
+;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;; for Cargo.toml and other config files
+
+(use-package toml-mode :ensure)
+
+
+;; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+;; setting up debugging support with dap-mode
+
+(use-package exec-path-from-shell
+  :ensure
+  :init (exec-path-from-shell-initialize))
+
+(when (executable-find "lldb-mi")
+  (use-package dap-mode
+    :ensure
+    :config
+    (dap-ui-mode)
+    (dap-ui-controls-mode 1)
+
+    (require 'dap-lldb)
+    (require 'dap-gdb-lldb)
+    ;; installs .extension/vscode
+    (dap-gdb-lldb-setup)
+    (dap-register-debug-template
+     "Rust::LLDB Run Configuration"
+     (list :type "lldb"
+           :request "launch"
+           :name "LLDB::Run"
+	   :gdbpath "rust-lldb"
+           ;; uncomment if lldb-mi is not in PATH
+           ;; :lldbmipath "path/to/lldb-mi"
+           ))))
 
 
 #+end_src
